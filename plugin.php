@@ -163,7 +163,7 @@ class WPGitHubUpdaterSetup {
 	}
 
 	public function private_description() {
-?>
+		?>
 		<p>Updating from private repositories requires a one-time application setup and authorization. These steps will not need to be repeated for other sites once you receive your access token.</p>
 		<p>Follow these steps:</p>
 		<ol>
@@ -178,7 +178,7 @@ class WPGitHubUpdaterSetup {
 		extract( $args );
 		$gh = get_option( 'ghupdate' );
 		$value = $gh[$id];
-?>
+		?>
 		<input value="<?php esc_attr_e( $value )?>" name="<?php esc_attr_e( $id ) ?>" id="<?php esc_attr_e( $id ) ?>" type="text" class="regular-text" />
 		<?php echo $description ?>
 		<?php
@@ -190,43 +190,43 @@ class WPGitHubUpdaterSetup {
 		$value = $gh[$id];
 
 		if ( empty( $value ) ) {
-?>
+			?>
 			<p>Input Client ID and Client Secret, then <a href="javascript:document.forms['ghupdate'].submit();">Authorize with GitHub</a>.</p>
 			<input value="<?php esc_attr_e( $value )?>" name="<?php esc_attr_e( $id ) ?>" id="<?php esc_attr_e( $id ) ?>" type="hidden" />
 			<?php
 		}else {
-?>
+			?>
 			<input value="<?php esc_attr_e( $value )?>" name="<?php esc_attr_e( $id ) ?>" id="<?php esc_attr_e( $id ) ?>" type="text" class="regular-text" />
 			<p>Add to the <strong>$config</strong> array: <code>'access_token' => '<?php echo $value ?>',</code>
+				<?php
+			}
+			?>
 			<?php
 		}
-?>
-		<?php
-	}
 
-	public function settings_validate( $input ) {
-		if ( empty( $input ) ) {
-			$input = $_POST;
-		}
-		if ( !is_array( $input ) ) {
-			return false;
-		}
-		$gh = get_option( 'ghupdate' );
-		$valid = array();
+		public function settings_validate( $input ) {
+			if ( empty( $input ) ) {
+				$input = $_POST;
+			}
+			if ( !is_array( $input ) ) {
+				return false;
+			}
+			$gh = get_option( 'ghupdate' );
+			$valid = array();
 
-		$valid['client_id']     = strip_tags( $input['client_id'] );
-		$valid['client_secret'] = strip_tags( $input['client_secret'] );
-		$valid['access_token']  = strip_tags( $input['access_token'] );
+			$valid['client_id']     = strip_tags( $input['client_id'] );
+			$valid['client_secret'] = strip_tags( $input['client_secret'] );
+			$valid['access_token']  = strip_tags( $input['access_token'] );
 
-		if ( empty( $valid['client_id'] ) ) {
-			add_settings_error( 'client_id', 'no-client-id', __( 'Please input a Client ID before authorizing.', 'github_plugin_updater' ), 'error' );
-		}
-		if ( empty( $valid['client_secret'] ) ) {
-			add_settings_error( 'client_secret', 'no-client-secret', __( 'Please input a Client Secret before authorizing.', 'github_plugin_updater' ), 'error' );
-		}
+			if ( empty( $valid['client_id'] ) ) {
+				add_settings_error( 'client_id', 'no-client-id', __( 'Please input a Client ID before authorizing.', 'github_plugin_updater' ), 'error' );
+			}
+			if ( empty( $valid['client_secret'] ) ) {
+				add_settings_error( 'client_secret', 'no-client-secret', __( 'Please input a Client Secret before authorizing.', 'github_plugin_updater' ), 'error' );
+			}
 
-		return $valid;
-	}
+			return $valid;
+		}
 
 	/**
 	 * Add a settings link to the plugin actions
@@ -247,7 +247,7 @@ class WPGitHubUpdaterSetup {
 	 */
 	function admin_page() {
 		$this->maybe_authorize();
-?>
+		?>
 		<div class="wrap ghupdate-admin">
 
 			<div class="head-wrap">
@@ -258,56 +258,56 @@ class WPGitHubUpdaterSetup {
 			<div class="postbox-container primary">
 				<form method="post" id="ghupdate" action="options.php">
 					<?php
-		settings_errors();
+					settings_errors();
 		settings_fields( 'ghupdate' ); // includes nonce
 		do_settings_sections( 'github-updater' );
-?>
-				</form>
-			</div>
+		?>
+	</form>
+</div>
 
-		</div>
-		<?php
+</div>
+<?php
+}
+
+public function maybe_authorize() {
+	$gh = get_option( 'ghupdate' );
+	if ( 'false' == $_GET['authorize'] || 'true' != $_GET['settings-updated'] || empty( $gh['client_id'] ) || empty( $gh['client_secret'] ) ) {
+		return;
 	}
 
-	public function maybe_authorize() {
-		$gh = get_option( 'ghupdate' );
-		if ( 'false' == $_GET['authorize'] || 'true' != $_GET['settings-updated'] || empty( $gh['client_id'] ) || empty( $gh['client_secret'] ) ) {
-			return;
-		}
-
-		$redirect_uri = urlencode( admin_url( 'admin-ajax.php?action=set_github_oauth_key' ) );
+	$redirect_uri = urlencode( admin_url( 'admin-ajax.php?action=set_github_oauth_key' ) );
 
 		// Send user to GitHub for account authorization
 
-		$query = 'https://github.com/login/oauth/authorize';
+	$query = 'https://github.com/login/oauth/authorize';
+	$query_args = array(
+		'scope' => 'repo',
+		'client_id' => $gh['client_id'],
+		'redirect_uri' => $redirect_uri,
+	);
+	$query = add_query_arg( $query_args, $query );
+	wp_redirect( $query );
+
+	exit;
+
+}
+
+public function ajax_set_github_oauth_key() {
+	$gh = get_option( 'ghupdate' );
+
+	$query = admin_url( 'plugins.php' );
+	$query = add_query_arg( array( 'page' => 'github-updater' ), $query );
+
+	if ( isset( $_GET['code'] ) ) {
+			// Receive authorized token
+		$query = 'https://github.com/login/oauth/access_token';
 		$query_args = array(
-			'scope' => 'repo',
 			'client_id' => $gh['client_id'],
-			'redirect_uri' => $redirect_uri,
+			'client_secret' => $gh['client_secret'],
+			'code' => $_GET['code'],
 		);
 		$query = add_query_arg( $query_args, $query );
-		wp_redirect( $query );
-
-		exit;
-
-	}
-
-	public function ajax_set_github_oauth_key() {
-		$gh = get_option( 'ghupdate' );
-
-		$query = admin_url( 'plugins.php' );
-		$query = add_query_arg( array( 'page' => 'github-updater' ), $query );
-
-		if ( isset( $_GET['code'] ) ) {
-			// Receive authorized token
-			$query = 'https://github.com/login/oauth/access_token';
-			$query_args = array(
-				'client_id' => $gh['client_id'],
-				'client_secret' => $gh['client_secret'],
-				'code' => $_GET['code'],
-			);
-			$query = add_query_arg( $query_args, $query );
-			$response = wp_remote_get( $query, array( 'sslverify' => false ) );
+		$response = wp_remote_get( $query, array( 'sslverify' => false ) );
 			parse_str( $response['body'] ); // populates $access_token, $token_type
 
 			if ( !empty( $access_token ) ) {
